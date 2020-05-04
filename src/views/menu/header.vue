@@ -40,6 +40,9 @@
                         <li><a href="http://file.cssceg.com">文件共享</a></li>
                       </ul>
                     </li>
+                    <li class="nav-item">
+                      <router-link to="/ceshi" class="page-scroll">测试</router-link>
+                    </li>
                   </ul>
                 </div>
               </nav> <!-- navbar -->
