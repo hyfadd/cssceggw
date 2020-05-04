@@ -1,6 +1,6 @@
 <template>
   <div style="padding: 20px;">
-    <div v-if="isShow">
+    <div>
       <div style="display: flex;justify-content: flex-start;align-items: center">
         <strong style="width: 80px">物料选择:</strong>
         <el-select v-model="value" placeholder="请选择" filterable multiple value="" @change="handleChanges" style="width: 100%;flex: 1">
@@ -12,7 +12,7 @@
           </el-option>
         </el-select>
       </div>
-      <el-form v-if="ruleForm.numArr.length > 0" :model="ruleForm" ref="ruleForm" label-width="100px" class="borderSty">
+      <el-form v-if="ruleForm.numArr.length > 0" :model="ruleForm" ref="ruleForm" label-width="120px" class="borderSty">
         <div v-for="(item,index) in ruleForm.numArr" :key="index">
           <el-row>
             <el-col :span="12">
@@ -27,21 +27,29 @@
             </el-col>
           </el-row>
         </div>
-        <el-form-item>
-          <el-button type="success" round @click="submitForm('ruleForm')">立即创建</el-button>
-          <el-button round @click="resetForm('ruleForm')">重置</el-button>
-        </el-form-item>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item>
+              <el-button type="success" round @click="submitForm('ruleForm')">立即创建</el-button>
+              <el-button round @click="resetForm('ruleForm')">重置</el-button>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <p v-if="pVal" style="padding-left: 53px">参考意见：{{ pVal }}</p>
+          </el-col>
+        </el-row>
       </el-form>
     </div>
-    <div v-if="!isShow">
+    <div style="margin-top: 5px">
       <div style="display: flex;justify-content:flex-start;align-items: center">
         <strong style="padding-right: 10px">工艺选择:</strong>
         <el-radio-group v-model="radio">
           <el-radio :label="1">干式工艺</el-radio>
           <el-radio :label="2">湿式工艺</el-radio>
         </el-radio-group>
+        <el-button type="success" round @click="submitRadio" style="margin-left: 20px">提交</el-button>
       </div>
-      <el-button type="success" round @click="submitRadio">提交</el-button>
+      <p v-if="pVal1">参考意见：{{ pVal1 }}</p>
     </div>
   </div>
 </template>
@@ -56,7 +64,8 @@ export default {
   name: '',
   data () {
     return {
-      isShow: true,
+      pVal: '',
+      pVal1: '',
       radio: 1,
       options: [],
       value: '',
@@ -65,6 +74,7 @@ export default {
       ruleForm: {
         numArr: []
       },
+      params: [],
       rules: {
         material_ts: [
           {required: true, message: '请填写ts值', trigger: 'blur'}
@@ -99,12 +109,14 @@ export default {
           }
         })
       }
-      console.log(this.ruleForm.numArr, '5555555555555555')
+      this.params = JSON.parse(JSON.stringify(this.ruleForm.numArr))
     },
     submitRadio () {
       let val = {}
       val.gonyi = this.radio
-      this.$axios.post('getMassage', val)
+      this.params.push(val)
+      console.log(this.ruleForm.numArr, '111111111111111111')
+      this.$axios.post('getMassage', this.params)
         .then(res => {
           console.log(res, '返回数据')
           if (res.status === 200) {
@@ -112,11 +124,12 @@ export default {
               type: 'success',
               message: '提交成功'
             })
+            this.pVal1 = res.data
           }
         })
+      console.log(this.ruleForm.numArr, '2222222222222222222')
     },
     submitForm (formName) {
-      //      console.log(this.ruleForm.numArr, 'numArr')
       this.$refs[formName].validate((valid) => {
         if (valid) {
           this.$axios.post('getMethod', this.ruleForm.numArr)
@@ -127,7 +140,7 @@ export default {
                   type: 'success',
                   message: '提交成功'
                 })
-                this.isShow = false
+                this.pVal = res.data
               }
             })
         } else {
