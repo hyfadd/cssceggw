@@ -3,7 +3,8 @@
     <div>
       <div style="display: flex;justify-content: flex-start;align-items: center">
         <strong style="width: 80px">物料选择:</strong>
-        <el-select v-model="value" placeholder="请选择" filterable multiple value="" @change="handleChanges" style="width: 100%;flex: 1">
+        <el-select v-model="value" placeholder="请选择" filterable multiple value="" @change="handleChanges"
+                   style="width: 100%;flex: 1">
           <el-option
             v-for="item in options"
             :key="item.material_id"
@@ -16,7 +17,8 @@
         <div v-for="(item,index) in ruleForm.numArr" :key="index">
           <el-row>
             <el-col :span="12">
-              <el-form-item :label="item.material_name + 'ts值'" :prop="'numArr.' + index + '.material_ts'" :rules="[{required: true, message: '请填写ts值', trigger: 'blur'}]">
+              <el-form-item :label="item.material_name + 'ts值'" :prop="'numArr.' + index + '.material_ts'"
+                            :rules="[{required: true, message: '请填写ts值', trigger: 'blur'}]">
                 <el-input-number v-model="item.material_ts" :precision="2"></el-input-number>
               </el-form-item>
             </el-col>
@@ -49,18 +51,18 @@
         </el-radio-group>
         <el-button type="success" round @click="submitRadio" style="margin-left: 20px">提交</el-button>
       </div>
-      <p v-if="pVal1">参考意见：{{ pVal1 }}</p>
+      <!--<p v-if="pVal1">参考意见：{{ pVal1 }}</p>-->
+    </div>
+    <div id="flowchart">
     </div>
   </div>
 </template>
 <script>
-import ElRow from 'element-ui/packages/row/src/row'
-import ElCol from 'element-ui/packages/col/src/col'
+/* eslint-disable indent,new-cap,quotes */
+import dagreD3 from 'dagre-d3'
+import * as d3 from 'd3'
 
 export default {
-  components: {
-    ElCol,
-    ElRow},
   name: '',
   data () {
     return {
@@ -112,22 +114,90 @@ export default {
       this.params = JSON.parse(JSON.stringify(this.ruleForm.numArr))
     },
     submitRadio () {
-      let val = {}
-      val.gonyi = this.radio
-      this.params.push(val)
-      console.log(this.ruleForm.numArr, '111111111111111111')
-      this.$axios.post('getMassage', this.params)
+      document.getElementById('flowchart').innerHTML = ''
+      this.$axios.post('getMassage/' + this.radio, this.params)
         .then(res => {
-          console.log(res, '返回数据')
+          console.log(res.data, '返回数据')
           if (res.status === 200) {
             this.$message({
               type: 'success',
               message: '提交成功'
             })
             this.pVal1 = res.data
+            // 获取D3
+            var g = new dagreD3.graphlib.Graph().setGraph({})
+            console.log(g, 'gg')
+            // 添加节点
+            this.pVal1.forEach((item, index) => {
+              item.rx = item.ry = 5// 圆角
+              g.setNode(item.tn_id, item)
+              // 节点颜色 fill指节点背景色，stroke指节点描边颜色
+               g.node(item.tn_id).style = 'fill:' + 'green' + ';stroke: green;'
+            })
+            // 链接关系
+            this.pVal1.forEach(item => {
+              g.setEdge(item.tn_id, item.next_node, {
+                // 连线上的条件字
+                label: item.label,
+                // 连线的颜色
+                style: 'stroke: #0fb2cc; fill: none;',
+                // 箭头颜色
+                arrowheadStyle: 'fill: #0fb2cc;stroke: #0fb2cc;',
+                // 箭头形状（vee表示箭头是尖的，默认是平的）
+                arrowhead: 'vee'
+              })
+            })
+            g.nodes().forEach(function (v, index) {
+              // 去除第一个为undefined的node，造成undefined的具体原因还不明确，假如后面不报错了，把这一行删掉
+              if (index === 0) {
+                g.removeNode(v)
+              }
+              console.log('Node ' + v + ': ' + JSON.stringify(g.node(v)))
+            })
+            g.edges().forEach(function (e) {
+              console.log('Edge ' + e.v + ' -> ' + e.w + ': ' + JSON.stringify(g.edge(e)))
+            })
+            // 绘制图形(此处和darg中的不同)
+            var svg = d3.select('#flowchart')
+              .append('svg')
+              .attr('width', 1000)
+              .attr('height', 1500)
+            var inner = svg.append('g')
+            // 缩放
+            var zoom = d3.zoom().on('zoom', function () {
+              inner.attr('transform', d3.event.transform)
+            })
+            svg.call(zoom)
+            var render = new dagreD3.render()
+            render(inner, g)
+            let code
+            inner.selectAll('g.node')
+              .on('click', e => { // 点击事件
+                code = this.list.nodeInfos.filter(item => {
+                  return item.id === e
+                })
+                console.log(code)
+              })
+              .on('mouseover', e => { // 鼠标经过事件
+                let curNode = g.node(e)
+                console.log(curNode, 'curNode')
+              })
+            // 初始化缩放比例
+            var initialScale = 1
+            // 设置宽高
+            svg.call(
+              zoom.transform,
+              d3.zoomIdentity
+                .translate(
+                  (svg.attr('width') - g.graph().width * initialScale) / 2,
+                  20
+                )
+                .scale(initialScale)
+            )
+            svg.attr('height', g.graph().height * initialScale + 40)
+            this.$forceUpdate()
           }
         })
-      console.log(this.ruleForm.numArr, '2222222222222222222')
     },
     submitForm (formName) {
       this.$refs[formName].validate((valid) => {
@@ -156,13 +226,26 @@ export default {
 }
 </script>
 <style scoped>
-  .borderSty{
-    border:1px solid #DCDFE6;
+  .borderSty {
+    border: 1px solid #DCDFE6;
     padding: 20px 20px 0 20px;
     margin-top: 10px;
     border-radius: 4px
   }
-  .el-radio{
+
+  .el-radio {
     margin-bottom: 0;
+  }
+  svg {
+    font-size: 14px;
+  }
+  .node rect {
+    stroke: #606266;
+    fill: #fff;
+  }
+  .edgePath path {
+    stroke: #606266;
+    fill: #333;
+    stroke-width: 1.5px;
   }
 </style>
