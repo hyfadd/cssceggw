@@ -132,7 +132,7 @@ export default {
               item.rx = item.ry = 5// 圆角
               g.setNode(item.tn_id, item)
               // 节点颜色 fill指节点背景色，stroke指节点描边颜色
-               g.node(item.tn_id).style = 'fill:' + 'green' + ';stroke: green;'
+               g.node(item.tn_id).style = 'fill:' + '#67C23A' + ';stroke: #67C23A;'
             })
             // 链接关系
             this.pVal1.forEach(item => {
